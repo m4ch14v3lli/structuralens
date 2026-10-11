@@ -16,6 +16,9 @@ interface Metrics {
   protocol: string;
 }
 
+// PRIMARY PRODUCTION ENDPOINT (Direct to your Render deployment)
+const CLOUD_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "wss://structuralens.onrender.com/ws/inference";
+
 export default function Home() {
   const [ws, setWs] = useState<WebSocket | null>(null);
   const [originalImage, setOriginalImage] = useState<string | null>(null);
@@ -27,17 +30,16 @@ export default function Home() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [logs, setLogs] = useState<{ step: number; status: string; message: string }[]>([]);
-
-  const steps = [
-    { id: 1, name: "CV Ingestion", desc: "Spatial normalization & YOLO bounds", icon: <Activity className="w-4 h-4" /> },
-    { id: 2, name: "SAM 2 Masking", desc: "Pixel-level fracture boundary", icon: <Layers className="w-4 h-4" /> },
-    { id: 3, name: "Generative Repair", desc: "ControlNet mortar inpainting", icon: <Sparkles className="w-4 h-4" /> },
-    { id: 4, name: "Qdrant RAG", desc: "Civil compliance & cost indexing", icon: <Database className="w-4 h-4" /> },
-  ];
+  const [isConnected, setIsConnected] = useState(false);
 
   useEffect(() => {
-    const websocket = new WebSocket("ws://localhost:8000/ws/inference");
+    const websocket = new WebSocket(CLOUD_WS_URL);
     
+    websocket.onopen = () => {
+      console.log("Connected to Cloud Backend:", CLOUD_WS_URL);
+      setIsConnected(true);
+    };
+
     websocket.onmessage = (event) => {
       const data = JSON.parse(event.data);
       setLogs((prev) => [...prev, data]);
@@ -56,6 +58,11 @@ export default function Home() {
       if (data.step === 5) {
         setIsProcessing(false);
       }
+    };
+
+    websocket.onclose = () => {
+      console.log("Disconnected from Cloud Backend");
+      setIsConnected(false);
     };
 
     setWs(websocket);
@@ -99,7 +106,6 @@ export default function Home() {
     ws.send(JSON.stringify({ type: "START_INFERENCE", payload: originalImage }));
   };
 
-  // Determine current image to render based on user selection
   const currentDisplayImage = 
     activeTab === 'segmented' ? (segmentedImage || originalImage) :
     activeTab === 'repaired' ? (repairedImage || originalImage) : 
@@ -111,7 +117,7 @@ export default function Home() {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center pb-6 border-b border-neutral-800 gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 rounded-full bg-emerald-400 animate-pulse" />
+            <div className={`h-3 w-3 rounded-full ${isConnected ? 'bg-emerald-400 animate-pulse' : 'bg-amber-500'}`} />
             <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-2">
               Structura<span className="text-blue-400">Lens</span>
               <span className="text-xs px-2 py-0.5 rounded border border-blue-500/40 bg-blue-500/10 text-blue-300 font-mono font-normal">v1.0 Edge-Cloud</span>
@@ -122,8 +128,8 @@ export default function Home() {
 
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2 text-xs font-mono text-neutral-400 bg-neutral-900 border border-neutral-800 px-3 py-1.5 rounded-lg">
-            <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-            FASTAPI / WS: ONLINE (0.0.0.0:8000)
+            <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-emerald-500' : 'bg-amber-400 animate-ping'}`}></span>
+            {isConnected ? "RENDER CLOUD: CONNECTED" : "CONNECTING TO RENDER..."}
           </div>
         </div>
       </header>
@@ -182,10 +188,9 @@ export default function Home() {
               </div>
             )}
             
-            {/* Upload File Input */}
             <input 
               type="file" 
-              accept="image/*"
+              accept="image/*" 
               onChange={handleImageUpload} 
               className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
             />
