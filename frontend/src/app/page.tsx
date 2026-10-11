@@ -17,7 +17,7 @@ interface Metrics {
 }
 
 // PRIMARY PRODUCTION ENDPOINT (Direct to your Render deployment)
-const CLOUD_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "wss://structuralens.onrender.com/ws/inference";
+const CLOUD_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "wss://blogs-boolean-hours-bell.trycloudflare.com/ws/inference";
 
 export default function Home() {
   const [ws, setWs] = useState<WebSocket | null>(null);
