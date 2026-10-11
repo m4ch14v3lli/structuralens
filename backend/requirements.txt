@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+websockets
+ultralytics
+opencv-python-headless
+Pillow
+numpy
+qdrant-client
