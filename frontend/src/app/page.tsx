@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { 
   Upload, Activity, Layers, Sparkles, Database, CheckCircle2, 
-  Loader2, AlertTriangle, DollarSign, ShieldAlert, Ruler, FileText, ArrowRight
+  Loader2, DollarSign, ShieldAlert, Ruler, FileText
 } from "lucide-react";
 
 interface Metrics {
@@ -18,6 +18,39 @@ interface Metrics {
 
 // PRIMARY PRODUCTION ENDPOINT (Direct to your Render deployment)
 const CLOUD_WS_URL = process.env.NEXT_PUBLIC_WS_URL || "wss://blogs-boolean-hours-bell.trycloudflare.com/ws/inference";
+
+const steps = [
+  {
+    id: 1,
+    name: "Spatial Calibration",
+    desc: "YOLO detection and coordinate analysis",
+    icon: <Activity className="w-3.5 h-3.5" />,
+  },
+  {
+    id: 2,
+    name: "Damage Segmentation",
+    desc: "Identifying fracture boundaries",
+    icon: <Layers className="w-3.5 h-3.5" />,
+  },
+  {
+    id: 3,
+    name: "Generative Repair",
+    desc: "Rendering the repair simulation",
+    icon: <Sparkles className="w-3.5 h-3.5" />,
+  },
+  {
+    id: 4,
+    name: "Compliance Analysis",
+    desc: "Retrieving applicable standards",
+    icon: <Database className="w-3.5 h-3.5" />,
+  },
+  {
+    id: 5,
+    name: "Diagnostic Complete",
+    desc: "Finalizing the inspection report",
+    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+  },
+];
 
 export default function Home() {
   const [ws, setWs] = useState<WebSocket | null>(null);
@@ -285,9 +318,12 @@ export default function Home() {
             
             <div className="space-y-2.5">
               {steps.map((step) => {
-                const logEntry = logs.find((l) => l.step === step.id);
-                const isActive = isProcessing && !logEntry && (step.id === 1 || logs.find(l => l.step === step.id - 1));
-                const isComplete = logEntry !== undefined;
+                const stepLog = [...logs].reverse().find((log) => log.step === step.id);
+                const isComplete =
+                  stepLog?.status === "complete" ||
+                  logs.some((log) => log.step > step.id);
+                const isActive =
+                  isProcessing && !isComplete && stepLog?.status === "running";
 
                 return (
                   <div 
